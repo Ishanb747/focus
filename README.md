@@ -1,6 +1,6 @@
-# Stockroom - Tier 1 Warehouse Stock Manager
+# Stockroom - Tier 2 Warehouse Order Manager
 
-A complete Tier 1 submission for the developer assessment brief. Stockroom is a full-stack Next.js inventory app with real authentication, protected routes, product CRUD, and low-stock visibility.
+A complete Tier 2 submission for the developer assessment brief. Stockroom is a full-stack Next.js warehouse app with authentication, inventory management, concurrency-safe order fulfillment, backorders, and an audit trail.
 
 ## What is included
 
@@ -13,6 +13,10 @@ A complete Tier 1 submission for the developer assessment brief. Stockroom is a 
 - Client- and server-side Zod validation for every form
 - Unique SKUs per user, non-negative whole-number stock, and clear API errors
 - Low-stock dashboard metrics, alerts, empty states, loading states, and responsive UI
+- Multi-SKU order requests with varying quantities
+- Atomic PostgreSQL transactions with deterministic row locks to prevent overselling
+- Partial fulfillment that deducts available stock and backorders the remainder
+- Immutable order-item snapshots and a chronological audit log
 - Unit tests for important validation edge cases
 
 ## Stack
@@ -51,7 +55,21 @@ Then sign in with `demo@stockroom.app` / `Demo1234`.
 pnpm test
 pnpm lint
 pnpm build
+pnpm verify:orders
+pnpm verify:concurrency
 ```
+
+The two verification scripts use the configured PostgreSQL database, create isolated temporary users, assert persisted state, and clean up afterward. `verify:orders` covers partial fulfillment, zero stock, unknown-SKU rollback, totals, and audit history. `verify:concurrency` submits two competing orders simultaneously and proves total fulfillment cannot exceed starting stock.
+
+## Fulfillment model
+
+Each order is processed in one PostgreSQL transaction. Requested product rows are selected for the signed-in user and locked in stable ID order with `FOR UPDATE`. Fulfillment is calculated only after those locks are acquired, stock deductions and the complete order record are written together, and any error rolls the transaction back.
+
+- `FULFILLED`: all requested units were available.
+- `PARTIALLY_FULFILLED`: some units were deducted and the rest were backordered.
+- `BACKORDERED`: no requested units were available.
+
+Order items retain SKU and product-name snapshots, so history remains readable even if inventory changes later. Audit entries record order creation, each stock deduction, and each backordered line.
 
 ## Security and workflow notes
 
@@ -61,23 +79,24 @@ pnpm build
 - Product IDs alone never authorize access: every update and delete also filters by the signed-in user ID.
 - A product is flagged when `quantity < lowStockThreshold`, matching the brief's “below” wording. Zero is valid stock; negative and fractional values are rejected.
 - PostgreSQL is used for durable production-ready storage; the included connection placeholder is compatible with managed Neon databases.
+- Order validation rejects empty orders, duplicate SKUs, non-positive/fractional quantities, and more than 50 lines before fulfillment begins.
 
 ## Structure
 
 ```text
-src/app/api/          Auth and product route handlers
-src/app/dashboard/    Protected server-rendered dashboard route
-src/components/       Auth and inventory client workflows
-src/lib/              Database, auth, JWT, and validation boundaries
+src/app/api/          Auth, product, and order route handlers
+src/app/dashboard/    Protected inventory workspace
+src/app/orders/       Protected order workspace
+src/components/       Auth, inventory, and order client workflows
+src/lib/              Database, auth, validation, and atomic fulfillment
 src/middleware.ts     Early route protection and auth-page redirects
 prisma/               Schema and optional demo seed
+scripts/              Live PostgreSQL verification harnesses
 ```
 
 ## If I had more time
 
-- Add Playwright browser tests and API integration tests against a disposable database
-- Add paginated inventory history and audit events
+- Add Playwright browser tests and run integration tests against a dedicated disposable database
+- Add pagination and backorder release when stock is replenished
 - Add password reset, email verification, session revocation, and rate limiting
-- Move to managed PostgreSQL, add CI, and deploy a production preview
-
-Scope is intentionally limited to Tier 1; order fulfillment and routing are not included.
+- Add CI and deploy a production preview
