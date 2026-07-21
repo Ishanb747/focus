@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { AppSidebar } from "@/components/AppSidebar";
 import { firstValidationError, productSchema, type ProductInput } from "@/lib/validation";
 
 interface Product extends ProductInput { id: string; createdAt: string; updatedAt: string; userId: string }
@@ -23,7 +23,6 @@ function Icon({ name }: { name: "grid" | "box" | "alert" | "plus" | "search" | "
 }
 
 export function InventoryDashboard({ initialProducts, user }: { initialProducts: Product[]; user: User }) {
-  const router = useRouter();
   const [products, setProducts] = useState(initialProducts);
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
@@ -76,16 +75,9 @@ export function InventoryDashboard({ initialProducts, user }: { initialProducts:
     finally { setDeletingId(null); }
   }
 
-  async function logout() { await fetch("/api/auth/logout", { method: "POST" }); router.push("/login"); router.refresh(); }
-  const initials = user.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
-
   return (
     <main className="app-shell">
-      <aside className="sidebar">
-        <a href="/dashboard" className="brand"><span className="brand-mark"><i/><i/><i/></span><span>stockroom</span></a>
-        <nav><button className="active" onClick={() => setFilter("all")}><Icon name="grid"/>Overview</button><button onClick={() => setFilter("all")}><Icon name="box"/>All products<span>{products.length}</span></button><button onClick={() => setFilter("low")}><Icon name="alert"/>Low stock{lowCount > 0 && <span className="alert-count">{lowCount}</span>}</button></nav>
-        <div className="sidebar-user"><span className="avatar">{initials}</span><div><b>{user.name}</b><small>{user.email}</small></div><button onClick={logout} title="Log out" aria-label="Log out"><Icon name="logout"/></button></div>
-      </aside>
+      <AppSidebar user={user} active="inventory" productCount={products.length} lowStockCount={lowCount} onInventoryFilter={(next) => setFilter(next)} />
 
       <section className="dashboard-main">
         <header className="dashboard-header"><div><p className="eyebrow"><span/>INVENTORY OVERVIEW</p><h1>Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {user.name.split(" ")[0]}.</h1><p>Here’s what’s happening in your stockroom today.</p></div><button className="button button-primary" onClick={openAdd}><Icon name="plus"/>Add product</button></header>
