@@ -13,6 +13,7 @@ model User {
   email        String    @unique
   passwordHash String
   products     Product[]
+  orders       Order[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -31,4 +32,58 @@ model Product {
 
   @@unique([userId, sku])
   @@index([userId])
+}
+
+enum OrderStatus {
+  FULFILLED
+  PARTIALLY_FULFILLED
+  BACKORDERED
+}
+
+enum AuditAction {
+  ORDER_CREATED
+  STOCK_DEDUCTED
+  ITEM_BACKORDERED
+}
+
+model Order {
+  id               String       @id @default(cuid())
+  status           OrderStatus
+  totalRequested   Int
+  totalFulfilled   Int
+  totalBackordered Int
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items            OrderItem[]
+  auditEvents      OrderAudit[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model OrderItem {
+  id                  String   @id @default(cuid())
+  orderId             String
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sku                 String
+  productName         String
+  requestedQuantity   Int
+  fulfilledQuantity   Int
+  backorderedQuantity Int
+  createdAt           DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model OrderAudit {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  action    AuditAction
+  message   String
+  details   Json
+  createdAt DateTime    @default(now())
+
+  @@index([orderId, createdAt])
 }
