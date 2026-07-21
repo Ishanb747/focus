@@ -3,10 +3,10 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 export async function middleware(request: NextRequest) {
   const session = await verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value ?? "");
-  const isDashboard = request.nextUrl.pathname.startsWith("/dashboard");
+  const isProtectedPage = request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/orders");
   const isAuthPage = request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/register";
 
-  if (isDashboard && !session) {
+  if (isProtectedPage && !session) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
@@ -20,5 +20,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/orders/:path*", "/login", "/register"],
 };
