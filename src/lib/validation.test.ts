@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginSchema, productSchema, registerSchema } from "./validation";
+import { loginSchema, orderSchema, productSchema, registerSchema } from "./validation";
 
 describe("registration validation", () => {
   it("normalizes email and accepts a strong password", () => {
@@ -30,5 +30,17 @@ describe("product validation", () => {
     const base = { sku: "BOX-1", name: "Box", category: "Storage", lowStockThreshold: 5 };
     expect(productSchema.safeParse({ ...base, quantity: -1 }).success).toBe(false);
     expect(productSchema.safeParse({ ...base, quantity: 1.5 }).success).toBe(false);
+  });
+});
+
+describe("order validation", () => {
+  it("accepts multiple normalized SKUs with positive quantities", () => {
+    const order = orderSchema.parse({ items: [{ sku: " box-1 ", quantity: "2" }, { sku: "tape-1", quantity: 4 }] });
+    expect(order.items).toEqual([{ sku: "BOX-1", quantity: 2 }, { sku: "TAPE-1", quantity: 4 }]);
+  });
+
+  it("rejects zero quantities and duplicate SKUs", () => {
+    expect(orderSchema.safeParse({ items: [{ sku: "BOX-1", quantity: 0 }] }).success).toBe(false);
+    expect(orderSchema.safeParse({ items: [{ sku: "BOX-1", quantity: 1 }, { sku: "box-1", quantity: 2 }] }).success).toBe(false);
   });
 });
