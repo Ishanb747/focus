@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "verify:concurrency": "node --import tsx scripts/verify-concurrency.ts",
     "db:push": "prisma db push",
     "db:seed": "node --import tsx prisma/seed.ts"
   },
