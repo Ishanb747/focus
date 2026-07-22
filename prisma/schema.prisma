@@ -14,8 +14,40 @@ model User {
   passwordHash String
   products     Product[]
   orders       Order[]
+  deliveryQuotes DeliveryQuote[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+model DeliveryQuote {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  destinationPincode   String
+  destinationZone      String
+  actualWeightKg       Float
+  lengthCm             Float
+  widthCm              Float
+  heightCm             Float
+  volumetricWeightKg   Float
+  chargeableWeightKg   Float
+  warehouseId          String
+  warehouseName        String
+  originZone           String
+  ratePaisePerKg       Int
+  linehaulPaise        Int
+  handlingPaise        Int
+  vehiclePaise         Int
+  totalCostPaise       Int
+  totalCapacityKg      Float
+  unusedCapacityKg     Float
+  vehicleCount         Int
+  vehicles             Json
+  alternatives         Json
+  justification        String
+  createdAt            DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Product {
