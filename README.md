@@ -1,6 +1,6 @@
-# Stockroom - Tier 2 Warehouse Order Manager
+# Stockroom - Tier 3 Warehouse Routing Engine
 
-A complete Tier 2 submission for the developer assessment brief. Stockroom is a full-stack Next.js warehouse app with authentication, inventory management, concurrency-safe order fulfillment, backorders, and an audit trail.
+A complete Tier 3 submission for the developer assessment brief. Stockroom is a full-stack Next.js warehouse app with authentication, inventory management, concurrency-safe order fulfillment, and a capacity-aware delivery rate optimizer.
 
 ## What is included
 
@@ -17,6 +17,11 @@ A complete Tier 2 submission for the developer assessment brief. Stockroom is a 
 - Atomic PostgreSQL transactions with deterministic row locks to prevent overselling
 - Partial fulfillment that deducts available stock and backorders the remainder
 - Immutable order-item snapshots and a chronological audit log
+- Pincode-based warehouse zones with an explicit, symmetric zone-rate matrix
+- Actual-versus-volumetric weight calculation with auditable billing increments
+- Exhaustive fleet-combination optimization under per-warehouse capacity limits
+- Cheapest viable route selection with cost breakdown, alternatives, and a written justification
+- Persistent, user-scoped delivery quote history
 - Unit tests for important validation edge cases
 
 ## Stack
@@ -57,9 +62,10 @@ pnpm lint
 pnpm build
 pnpm verify:orders
 pnpm verify:concurrency
+pnpm verify:routing
 ```
 
-The two verification scripts use the configured PostgreSQL database, create isolated temporary users, assert persisted state, and clean up afterward. `verify:orders` covers partial fulfillment, zero stock, unknown-SKU rollback, totals, and audit history. `verify:concurrency` submits two competing orders simultaneously and proves total fulfillment cannot exceed starting stock.
+The three verification scripts use the configured PostgreSQL database, create isolated temporary users, assert persisted state, and clean up afterward. `verify:orders` covers partial fulfillment, zero stock, unknown-SKU rollback, totals, and audit history. `verify:concurrency` submits two competing orders simultaneously and proves total fulfillment cannot exceed starting stock. `verify:routing` covers actual and volumetric billing, warehouse selection, multi-vehicle capacity splitting, persisted quote snapshots, and rejection of unroutable shipments.
 
 ## Fulfillment model
 
@@ -71,6 +77,20 @@ Each order is processed in one PostgreSQL transaction. Requested product rows ar
 
 Order items retain SKU and product-name snapshots, so history remains readable even if inventory changes later. Audit entries record order creation, each stock deduction, and each backordered line.
 
+## Routing model and assumptions
+
+The routing engine evaluates five configured warehouse hubs: Delhi, Mumbai, Chennai, Kolkata, and Guwahati. Each has a source pincode, zone, handling charge, and finite fleet. Destination pincodes map to `NORTH`, `WEST`, `SOUTH`, `EAST`, `NORTHEAST`, or `REMOTE`; the exact prefix ranges and complete rate matrix live in `src/lib/routing.ts`.
+
+- Dimensions are entered in centimetres and weight in kilograms.
+- Volumetric weight is `length × width × height / 5,000`.
+- The higher of actual and volumetric weight is rounded up to the next 0.5 kg billing increment.
+- Route cost is chargeable weight times the zone-lane rate, plus warehouse handling and vehicle dispatch charges.
+- The optimizer exhaustively enumerates every permitted mini-van, box-truck, and heavy-truck combination at each warehouse. A combination is viable only when its capacity covers the chargeable weight.
+- The cheapest total is selected. Equal totals prefer fewer vehicles, then less unused capacity, then a stable warehouse ID order.
+- Money is calculated and stored in integer paise. The chosen route, fleet allocation, alternatives, and explanation are persisted as a quote snapshot.
+
+All configured warehouses are assumed able to dispatch the shipment; product-location inventory and live fleet telemetry are outside this assessment scope. Fleet availability is deterministic configuration rather than a reservation system.
+
 ## Security and workflow notes
 
 - The password limit is 72 characters to match bcrypt's input boundary.
@@ -80,15 +100,18 @@ Order items retain SKU and product-name snapshots, so history remains readable e
 - A product is flagged when `quantity < lowStockThreshold`, matching the brief's “below” wording. Zero is valid stock; negative and fractional values are rejected.
 - PostgreSQL is used for durable production-ready storage; the included connection placeholder is compatible with managed Neon databases.
 - Order validation rejects empty orders, duplicate SKUs, non-positive/fractional quantities, and more than 50 lines before fulfillment begins.
+- Rate inputs require a configured six-digit pincode and positive, bounded measurements. Unroutable weights fail without saving a quote.
+- Quote APIs and history are user-scoped and protected by the same signed session as inventory and orders.
 
 ## Structure
 
 ```text
-src/app/api/          Auth, product, and order route handlers
+src/app/api/          Auth, product, order, and rate route handlers
 src/app/dashboard/    Protected inventory workspace
 src/app/orders/       Protected order workspace
-src/components/       Auth, inventory, and order client workflows
-src/lib/              Database, auth, validation, and atomic fulfillment
+src/app/routing/      Protected rate and routing workspace
+src/components/       Auth, inventory, order, and routing workflows
+src/lib/              Auth, validation, fulfillment, and routing optimizer
 src/middleware.ts     Early route protection and auth-page redirects
 prisma/               Schema and optional demo seed
 scripts/              Live PostgreSQL verification harnesses
@@ -98,5 +121,7 @@ scripts/              Live PostgreSQL verification harnesses
 
 - Add Playwright browser tests and run integration tests against a dedicated disposable database
 - Add pagination and backorder release when stock is replenished
+- Connect warehouse selection to SKU-level inventory and reserve fleet capacity transactionally
+- Replace the static lane matrix with versioned carrier contracts and distance/service-level inputs
 - Add password reset, email verification, session revocation, and rate limiting
 - Add CI and deploy a production preview
