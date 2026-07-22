@@ -36,6 +36,18 @@ openssl rand -base64 48
 6. Deploy with the default build command, `pnpm build`.
 7. Do not run `pnpm db:seed` against a real customer database. It is only for an assessment/demo environment.
 
+## Render and Neon
+
+The repository includes a `render.yaml` Blueprint for a Node web service.
+
+1. In Render, create a new Blueprint from `Ishanb747/focus`.
+2. Confirm the `focus-stockroom` service and `main` branch.
+3. Enter `DATABASE_URL` and `JWT_SECRET` when Render prompts for the Blueprint's dashboard-only secrets.
+4. Apply the Blueprint and wait for its health check to pass.
+5. Run `pnpm db:push` once from a trusted environment before accepting traffic if the target database is new.
+
+The Blueprint pins Node 22, uses the frozen pnpm lockfile, and deploys `main` after its CI checks pass.
+
 ## Generic Node host
 
 ```bash
