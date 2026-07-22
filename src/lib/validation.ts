@@ -70,6 +70,22 @@ export const orderSchema = z
 
 export type OrderInput = z.infer<typeof orderSchema>;
 
+const positiveMeasurement = (label: string, max: number) => z.coerce
+  .number()
+  .finite(`${label} must be a number`)
+  .positive(`${label} must be greater than 0`)
+  .max(max, `${label} must be ${max} or less`);
+
+export const rateQuoteSchema = z.object({
+  destinationPincode: z.string().trim().regex(/^\d{6}$/, "Enter a 6-digit destination pincode"),
+  actualWeightKg: positiveMeasurement("Actual weight", 50_000),
+  lengthCm: positiveMeasurement("Length", 1_000),
+  widthCm: positiveMeasurement("Width", 1_000),
+  heightCm: positiveMeasurement("Height", 1_000),
+});
+
+export type RateQuoteInput = z.infer<typeof rateQuoteSchema>;
+
 export function firstValidationError(error: z.ZodError): string {
   return error.issues[0]?.message ?? "Please check the form and try again";
 }

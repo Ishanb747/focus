@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginSchema, orderSchema, productSchema, registerSchema } from "./validation";
+import { loginSchema, orderSchema, productSchema, rateQuoteSchema, registerSchema } from "./validation";
 
 describe("registration validation", () => {
   it("normalizes email and accepts a strong password", () => {
@@ -42,5 +42,18 @@ describe("order validation", () => {
   it("rejects zero quantities and duplicate SKUs", () => {
     expect(orderSchema.safeParse({ items: [{ sku: "BOX-1", quantity: 0 }] }).success).toBe(false);
     expect(orderSchema.safeParse({ items: [{ sku: "BOX-1", quantity: 1 }, { sku: "box-1", quantity: 2 }] }).success).toBe(false);
+  });
+});
+
+describe("rate quote validation", () => {
+  it("coerces positive shipment measurements", () => {
+    expect(rateQuoteSchema.parse({ destinationPincode: " 400001 ", actualWeightKg: "12.5", lengthCm: "40", widthCm: 30, heightCm: 20 })).toEqual({
+      destinationPincode: "400001", actualWeightKg: 12.5, lengthCm: 40, widthCm: 30, heightCm: 20,
+    });
+  });
+
+  it("rejects malformed pincodes and non-positive dimensions", () => {
+    expect(rateQuoteSchema.safeParse({ destinationPincode: "40001", actualWeightKg: 2, lengthCm: 40, widthCm: 30, heightCm: 20 }).success).toBe(false);
+    expect(rateQuoteSchema.safeParse({ destinationPincode: "400001", actualWeightKg: 2, lengthCm: 0, widthCm: 30, heightCm: 20 }).success).toBe(false);
   });
 });
