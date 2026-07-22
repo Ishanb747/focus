@@ -2,6 +2,8 @@
 
 The application is designed for Vercel plus a managed PostgreSQL provider such as Neon. It can also run on any Node.js host that supports Next.js.
 
+Use Node.js 22 or newer, matching the automated CI environment and the pinned pnpm runtime.
+
 ## Required configuration
 
 Create these production environment variables in the hosting dashboard:
