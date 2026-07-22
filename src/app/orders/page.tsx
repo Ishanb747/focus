@@ -11,14 +11,16 @@ export default async function OrdersPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [products, orders] = await Promise.all([
+  const [products, orders, quoteCount] = await Promise.all([
     db.product.findMany({ where: { userId: session.userId }, orderBy: { name: "asc" } }),
     db.order.findMany({ where: { userId: session.userId }, include: orderInclude, orderBy: { createdAt: "desc" } }),
+    db.deliveryQuote.count({ where: { userId: session.userId } }),
   ]);
 
   return (
     <OrdersDashboard
       user={session}
+      quoteCount={quoteCount}
       initialProducts={products.map((product) => ({ ...product, createdAt: product.createdAt.toISOString(), updatedAt: product.updatedAt.toISOString() }))}
       initialOrders={orders.map((order) => ({
         ...order,

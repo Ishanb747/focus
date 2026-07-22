@@ -67,7 +67,7 @@ function statusLabel(status: Order["status"]) {
   return "Fulfilled";
 }
 
-export function OrdersDashboard({ initialProducts, initialOrders, user }: { initialProducts: Product[]; initialOrders: Order[]; user: User }) {
+export function OrdersDashboard({ initialProducts, initialOrders, quoteCount, user }: { initialProducts: Product[]; initialOrders: Order[]; quoteCount: number; user: User }) {
   const [products, setProducts] = useState(initialProducts);
   const [orders, setOrders] = useState(initialOrders);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -130,7 +130,7 @@ export function OrdersDashboard({ initialProducts, initialOrders, user }: { init
 
   return (
     <main className="app-shell">
-      <AppSidebar user={user} active="orders" productCount={products.length} lowStockCount={lowStockCount} orderCount={orders.length} />
+      <AppSidebar user={user} active="orders" productCount={products.length} lowStockCount={lowStockCount} orderCount={orders.length} quoteCount={quoteCount} />
       <section className="dashboard-main orders-main">
         <header className="dashboard-header">
           <div><p className="eyebrow"><span/>ORDER FULFILLMENT</p><h1>Orders</h1><p>Create multi-SKU orders with atomic stock deduction and automatic backorders.</p></div>

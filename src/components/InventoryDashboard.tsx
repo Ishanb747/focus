@@ -22,7 +22,7 @@ function Icon({ name }: { name: "grid" | "box" | "alert" | "plus" | "search" | "
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-export function InventoryDashboard({ initialProducts, initialFilter, orderCount, user }: { initialProducts: Product[]; initialFilter: Filter; orderCount: number; user: User }) {
+export function InventoryDashboard({ initialProducts, initialFilter, orderCount, quoteCount, user }: { initialProducts: Product[]; initialFilter: Filter; orderCount: number; quoteCount: number; user: User }) {
   const [products, setProducts] = useState(initialProducts);
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [search, setSearch] = useState("");
@@ -77,7 +77,7 @@ export function InventoryDashboard({ initialProducts, initialFilter, orderCount,
 
   return (
     <main className="app-shell">
-      <AppSidebar user={user} active="inventory" productCount={products.length} lowStockCount={lowCount} orderCount={orderCount} onInventoryFilter={(next) => setFilter(next)} />
+      <AppSidebar user={user} active="inventory" productCount={products.length} lowStockCount={lowCount} orderCount={orderCount} quoteCount={quoteCount} onInventoryFilter={(next) => setFilter(next)} />
 
       <section className="dashboard-main">
         <header className="dashboard-header"><div><p className="eyebrow"><span/>INVENTORY OVERVIEW</p><h1>Good {new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, {user.name.split(" ")[0]}.</h1><p>Here’s what’s happening in your stockroom today.</p></div><button className="button button-primary" onClick={openAdd}><Icon name="plus"/>Add product</button></header>
